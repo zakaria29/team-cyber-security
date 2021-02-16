@@ -5,6 +5,8 @@ import axios from "axios"
 import TestList from "../components/TestList"
 import Modal from "../components/Modal"
 import $ from "jquery"
+import Alert from "../components/Alert"
+import { useEffect } from "react";
 
 export default class Test extends React.Component{
     constructor(){
@@ -14,12 +16,14 @@ export default class Test extends React.Component{
             categories: [],
             do_exam_id: "",
             results: [],
+            permission: true,
             submit: {
                 question_id: "",
                 question: "",
                 answer: "",
                 files: [],
                 point: 0,
+                result: null,
             }
         }
 
@@ -50,7 +54,7 @@ export default class Test extends React.Component{
                 window.location = "/login"                
             } else {
                 
-                let results = response.data
+                let results = response.data.results
                 let categories = this.state.categories
                 for (let index = 0; index < categories.length; index++) {
                     for (let indeks = 0; indeks < categories[index].category.questions.length; indeks++) {
@@ -72,7 +76,8 @@ export default class Test extends React.Component{
 
                 this.setState({
                     categories: categories,
-                    results: results
+                    results: results,
+                    permission: response.data.exam.status
                 })
             }
             
@@ -93,6 +98,7 @@ export default class Test extends React.Component{
             } else {
                 this.setState({categories: response.data})
                 this.getResult()
+                setInterval(() => {this.getResult()}, 11000)
             }
             
         })
@@ -111,14 +117,15 @@ export default class Test extends React.Component{
                 question: question.question,
                 answer: question.answer,
                 files: question.files,
-                point: question.point
+                point: question.point,
+                result: null
             }
         })
     }
 
     submitAnswer = ev => {
         ev.preventDefault()
-        $("#question_modal").modal("hide")
+        // $("#question_modal").modal("hide")
         let member = JSON.parse(localStorage.getItem("member"))
         let form = new FormData()
         form.append("do_exam_id",this.state.do_exam_id)
@@ -132,12 +139,53 @@ export default class Test extends React.Component{
             let status = response.data.status
             if (status) {
                 // window.alert(response.data.message)
-                this.getExamCategory()
+                this.setState({submit:{...this.state.submit, result: response.data.result}})
+                this.getResult()
             } else {
                 window.alert(response.data.message)
             }
         })
         .catch(e => console.log(e.message))
+    }
+
+    alertTrueFalse = validate => {
+        if (validate === null) {
+            return null
+        } else if (validate === true) {
+            return (
+                <Alert bgColor="green" show={true}>
+                    <strong><i>Your answer is correct</i></strong>
+                </Alert>
+            )
+        } else if (validate === false){
+            return (
+                <Alert bgColor="maroon" show={true}>
+                    <strong><i>Your answer is incorrect</i></strong>
+                </Alert>
+            )
+        }
+    }    
+
+    finish = () => {
+        if (window.confirm("Are you sure will finish this exam?")) {
+            let url = base_url + "/finish-exam"
+            let do_exam_id = decrypt(localStorage.getItem("doEID"))
+            let form = new FormData()
+            form.append("do_exam_id", do_exam_id)
+            axios.post(url, form, this.headerConfig())
+            .then(response => {
+                let status = response.data.status
+                if (status) {
+                    window.alert(response.data.message)
+                    localStorage.removeItem("doEID")
+                    localStorage.removeItem("eID")
+                    window.location = "/exam"
+                } else {
+                    window.alert(response.data.message)
+                }
+            })
+            .catch(e => console.log(e.message))
+        }
     }
 
     render(){
@@ -159,8 +207,15 @@ export default class Test extends React.Component{
                                 category_name={cat.category.category_name}
                                 questions={cat.category.questions}
                                 openQuestion={q => this.openQuestion(q)}
+                                permission={this.state.permission}
                                  />
-                            ))}                            
+                            ))}    
+                            <div className="text-right">
+                                <button className="btn btn-info my-2" onClick={() => this.finish()}>
+                                    <span className="fa fa-check"></span> Finish Exam
+                                </button> 
+                            </div>
+                                                   
                         </div>
                     </div>
                 </div>
@@ -176,14 +231,14 @@ export default class Test extends React.Component{
                         </div>
                         <div className="row mx-1">
                         {this.state.submit.files.map(file => (
-                            <div className="col-lg-6 col-sm-12 p-1">
+                            <div key={file.file_id} className="col-lg-6 col-sm-12 p-1">
                                 <a href={storage_url+file.file_name} download target="_blank">
                                     {file.file_name}
                                 </a>
                             </div>
                         ))}
                         </div>
-                        <div className="row mt-2">
+                        <div className="row my-2">
                             <div className="col-lg-9 col-sm-12">
                                 <small className="text-danger">
                                     Format Flag: LKSMALANG29{`{.....}`}
@@ -200,6 +255,7 @@ export default class Test extends React.Component{
                                 </button>
                             </div>
                         </div>
+                        {this.alertTrueFalse(this.state.submit.result)}
                     </form>
                 </Modal>
             </div>

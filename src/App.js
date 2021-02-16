@@ -9,7 +9,7 @@ export default class App extends React.Component{
     render(){
         return(
             <Switch>
-                <Route path="/" exact component={null} /> 
+                <Route path="/" exact component={Exam} /> 
                 <Route path="/login" exact component={Login} />
                 <Route path="/exam" exact component={Exam} />
                 <Route path="/test" exact component={Test} />

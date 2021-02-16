@@ -2,9 +2,11 @@ import React from "react"
 
 export default class TestList extends React.Component{
     cardPoint = (que) => {
+        let permission = this.props.permission
         if (que.validate === null) {
             return (
                 <button className="btn btn-block ml-1 mt-1"
+                disabled={permission}
                 onClick={() => this.props.openQuestion(que)}>
                     <div className="card">
                         <div className="card-body bg-light">
@@ -26,6 +28,7 @@ export default class TestList extends React.Component{
         } else if (que.validate === false){
             return (
                 <button className="btn btn-block ml-1 mt-1"
+                disabled={permission}
                 onClick={() => this.props.openQuestion(que)}>
                     <div className="card">
                         <div className="card-body bg-danger">
